@@ -39,3 +39,33 @@ writeFileSync(
     game_path_max_bytes: 1000,
   }),
 );
+
+// Neon Aegis hand-in self-check, written for this entry: the dossier is the
+// only artefact the judge reads, so before this program exits it proves the
+// dossier it just wrote is the current schema, that the screenshots the
+// cover is drawn from are really in /output, and it logs a one-line summary
+// of what was handed in. It writes nothing: /output keeps exactly the shape
+// the starter produces, so a failure here means the hand-in is broken, not
+// that the check changed it.
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+
+function countGameFiles(dir: string): number {
+  let total = 0;
+  for (const name of readdirSync(dir, { withFileTypes: true })) {
+    total += name.isDirectory() ? countGameFiles(join(dir, name.name)) : 1;
+  }
+  return total;
+}
+
+const handedIn = JSON.parse(readFileSync(join(out, 'dossier.json'), 'utf8'));
+if (handedIn.schema !== 'makefun/dossier/v1') {
+  throw new Error(`Neon Aegis: unexpected dossier schema ${String(handedIn.schema)}`);
+}
+const shotNames = readdirSync(join(out, 'screenshots')).filter((name) => /\.(png|jpe?g)$/i.test(name));
+if (shotNames.length < 3 || shotNames.length > 4) {
+  throw new Error(`Neon Aegis: expected 3 or 4 screenshots, found ${shotNames.length}`);
+}
+console.log(
+  `Neon Aegis handed in: ${shotNames.length} screenshots, ${countGameFiles(join(out, 'game'))} game files, ` +
+    `dossier ${statSync(join(out, 'dossier.json')).size} bytes.`,
+);
